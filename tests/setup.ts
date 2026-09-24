@@ -1,0 +1,10 @@
+const env = process.env as Record<string, string | undefined>;
+env.NODE_ENV = env.NODE_ENV ?? "test";
+env.APP_URL = env.APP_URL ?? "http://localhost:3000";
+env.DATABASE_URL = env.DATABASE_URL ?? "postgresql://univox:univox@localhost:5432/univox_test";
+env.AUTH_SECRET = env.AUTH_SECRET ?? "test-auth-secret-must-be-at-least-32-chars";
+env.CORS_ORIGINS = env.CORS_ORIGINS ?? "http://localhost:3000";
+env.LOG_LEVEL = env.LOG_LEVEL ?? "silent";
+env.RATE_LIMIT_MAX = env.RATE_LIMIT_MAX ?? "100";
+env.RATE_LIMIT_WINDOW_MS = env.RATE_LIMIT_WINDOW_MS ?? "60000";
+env.TRUST_PROXY = env.TRUST_PROXY ?? "false";
