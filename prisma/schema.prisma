@@ -124,9 +124,30 @@ enum ContentVisibility {
 
 enum PaymentStatus {
   PENDING
+  PROCESSING
   SUCCEEDED
   FAILED
+  CANCELLED
   REFUNDED
+}
+
+enum ProductType {
+  MEMBERSHIP
+  DIGITAL
+  EVENT
+  TIP
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum MembershipGrantStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
 }
 
 enum EventStatus {
@@ -158,6 +179,11 @@ model User {
   content              Content[]
   mediaAssets          MediaAsset[]
   payments             Payment[]
+  products             Product[]
+  payerTransactions    Transaction[]        @relation("TransactionPayer")
+  recipientTransactions Transaction[]       @relation("TransactionRecipient")
+  subscribedMemberships CreatorMembership[] @relation("MembershipSubscriber")
+  grantedMemberships   CreatorMembership[]  @relation("MembershipCreator")
   events               Event[]
   rsvps                EventRsvp[]
   aiJobs               AiJob[]
@@ -544,6 +570,108 @@ model Payment {
   updatedAt   DateTime      @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+}
+
+model Product {
+  id           String        @id @default(cuid())
+  creatorId    String
+  type         ProductType   @default(MEMBERSHIP)
+  name         String
+  description  String?
+  amountCents  Int
+  currency     String        @default("USD")
+  intervalDays Int?
+  status       ProductStatus @default(DRAFT)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  creator      User                 @relation(fields: [creatorId], references: [id], onDelete: Restrict)
+  transactions Transaction[]
+  memberships  CreatorMembership[]
+
+  @@index([creatorId, status])
+}
+
+model Transaction {
+  id                   String        @id @default(cuid())
+  payerId              String
+  recipientId          String
+  productId            String
+  amountCents          Int
+  currency             String
+  provider             String
+  providerReference    String        @unique
+  platformFeeCents     Int
+  creatorAmountCents   Int
+  status               PaymentStatus @default(PENDING)
+  idempotencyKeyHash   String?
+  requestFingerprint   String?
+  failureReason        String?
+  succeededAt          DateTime?
+  refundedAt           DateTime?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  payer       User                 @relation("TransactionPayer", fields: [payerId], references: [id], onDelete: Restrict)
+  recipient   User                 @relation("TransactionRecipient", fields: [recipientId], references: [id], onDelete: Restrict)
+  product     Product              @relation(fields: [productId], references: [id], onDelete: Restrict)
+  audits      PaymentAuditEvent[]
+  memberships CreatorMembership[]
+
+  @@unique([payerId, idempotencyKeyHash])
+  @@index([payerId, createdAt])
+  @@index([recipientId, status, createdAt])
+  @@index([productId])
+  @@index([status])
+}
+
+model ProcessedWebhookEvent {
+  id            String   @id @default(cuid())
+  provider      String
+  eventId       String
+  transactionId String?
+  createdAt     DateTime @default(now())
+
+  @@unique([provider, eventId])
+  @@index([transactionId])
+}
+
+model PaymentAuditEvent {
+  id            String         @id @default(cuid())
+  transactionId String
+  actorType     String
+  actorId       String?
+  fromStatus    PaymentStatus?
+  toStatus      PaymentStatus?
+  event         String
+  data          Json           @default("{}")
+  createdAt     DateTime       @default(now())
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@index([transactionId, createdAt])
+}
+
+model CreatorMembership {
+  id            String                 @id @default(cuid())
+  subscriberId  String
+  creatorId     String
+  productId     String
+  transactionId String
+  status        MembershipGrantStatus  @default(ACTIVE)
+  startsAt      DateTime
+  expiresAt     DateTime?
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+
+  subscriber  User        @relation("MembershipSubscriber", fields: [subscriberId], references: [id], onDelete: Restrict)
+  creator     User        @relation("MembershipCreator", fields: [creatorId], references: [id], onDelete: Restrict)
+  product     Product     @relation(fields: [productId], references: [id], onDelete: Restrict)
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+
+  @@index([subscriberId, creatorId])
+  @@index([creatorId, status])
+  @@index([transactionId])
 }
 
 model Event {

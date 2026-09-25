@@ -11,6 +11,8 @@ const validEnv = {
   RATE_LIMIT_MAX: "50",
   RATE_LIMIT_WINDOW_MS: "1000",
   TRUST_PROXY: "false",
+  PAYMENTS_PROVIDER: "sandbox",
+  PAYMENTS_WEBHOOK_SECRET: "test-payments-webhook-secret",
 } as NodeJS.ProcessEnv;
 
 describe("loadConfig", () => {
@@ -51,6 +53,33 @@ describe("loadConfig", () => {
         AUTH_SECRET: "production-secret-value-with-enough-length",
       }),
     ).toThrow(/must not use the local development default/);
+  });
+
+  it("rejects sandbox payments in production", () => {
+    expect(() =>
+      loadConfig({
+        ...validEnv,
+        NODE_ENV: "production",
+        APP_URL: "https://univox.example",
+        DATABASE_URL: "postgresql://prod-user:prod-pass@db.internal:5432/univox",
+        AUTH_SECRET: "production-secret-value-with-enough-length",
+        STORAGE_PROVIDER: "s3",
+        S3_BUCKET: "univox-media",
+        S3_ACCESS_KEY_ID: "access",
+        S3_SECRET_ACCESS_KEY: "secret",
+        PAYMENTS_PROVIDER: "sandbox",
+        PAYMENTS_WEBHOOK_SECRET: "production-webhook-secret",
+      }),
+    ).toThrow(/live provider in production/);
+  });
+
+  it("requires Stripe credentials when Stripe is selected", () => {
+    expect(() =>
+      loadConfig({
+        ...validEnv,
+        PAYMENTS_PROVIDER: "stripe",
+      }),
+    ).toThrow(/STRIPE_SECRET_KEY/);
   });
 
   it("parses CORS origins", () => {

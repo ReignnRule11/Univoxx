@@ -17,6 +17,9 @@ jobs:
       LOG_LEVEL: silent
       TRUST_PROXY: "false"
       STORAGE_PROVIDER: memory
+      PAYMENTS_PROVIDER: sandbox
+      PAYMENTS_WEBHOOK_SECRET: test-payments-webhook-secret
+      PAYMENTS_PLATFORM_FEE_BPS: "1000"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

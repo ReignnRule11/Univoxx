@@ -26,9 +26,19 @@ export const envSchema = z
       .enum(["true", "false"])
       .default("true")
       .transform((value) => value === "true"),
+    PAYMENTS_PROVIDER: z.enum(["sandbox", "stripe", "paystack", "flutterwave"]).optional(),
+    PAYMENTS_WEBHOOK_SECRET: z.string().min(16).optional().or(z.literal("")),
+    PAYMENTS_PLATFORM_FEE_BPS: z.coerce.number().int().min(0).max(10_000).default(1000),
+    STRIPE_SECRET_KEY: z.string().min(1).optional().or(z.literal("")),
+    STRIPE_WEBHOOK_SECRET: z.string().min(1).optional().or(z.literal("")),
+    PAYSTACK_SECRET_KEY: z.string().min(1).optional().or(z.literal("")),
+    FLUTTERWAVE_SECRET_KEY: z.string().min(1).optional().or(z.literal("")),
+    FLUTTERWAVE_WEBHOOK_HASH: z.string().min(1).optional().or(z.literal("")),
   })
   .superRefine((env, ctx) => {
     const provider = env.STORAGE_PROVIDER ?? (env.NODE_ENV === "production" ? "s3" : "memory");
+    const paymentsProvider =
+      env.PAYMENTS_PROVIDER ?? (env.NODE_ENV === "production" ? undefined : "sandbox");
     if (env.NODE_ENV === "production") {
       if (env.AUTH_SECRET.includes("replace-with") || env.AUTH_SECRET.includes("test-auth-secret")) {
         ctx.addIssue({
@@ -49,6 +59,61 @@ export const envSchema = z
           code: z.ZodIssueCode.custom,
           path: ["STORAGE_PROVIDER"],
           message: "STORAGE_PROVIDER must be s3 in production",
+        });
+      }
+      if (paymentsProvider === "sandbox") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["PAYMENTS_PROVIDER"],
+          message: "PAYMENTS_PROVIDER must be a live provider in production",
+        });
+      }
+    }
+    if (paymentsProvider === "sandbox") {
+      if (!env.PAYMENTS_WEBHOOK_SECRET) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["PAYMENTS_WEBHOOK_SECRET"],
+          message: "PAYMENTS_WEBHOOK_SECRET is required for the sandbox provider",
+        });
+      }
+    }
+    if (paymentsProvider === "stripe") {
+      if (!env.STRIPE_SECRET_KEY) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["STRIPE_SECRET_KEY"],
+          message: "STRIPE_SECRET_KEY is required",
+        });
+      }
+      if (!env.STRIPE_WEBHOOK_SECRET) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["STRIPE_WEBHOOK_SECRET"],
+          message: "STRIPE_WEBHOOK_SECRET is required",
+        });
+      }
+    }
+    if (paymentsProvider === "paystack" && !env.PAYSTACK_SECRET_KEY) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["PAYSTACK_SECRET_KEY"],
+        message: "PAYSTACK_SECRET_KEY is required",
+      });
+    }
+    if (paymentsProvider === "flutterwave") {
+      if (!env.FLUTTERWAVE_SECRET_KEY) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["FLUTTERWAVE_SECRET_KEY"],
+          message: "FLUTTERWAVE_SECRET_KEY is required",
+        });
+      }
+      if (!env.FLUTTERWAVE_WEBHOOK_HASH) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["FLUTTERWAVE_WEBHOOK_HASH"],
+          message: "FLUTTERWAVE_WEBHOOK_HASH is required",
         });
       }
     }
