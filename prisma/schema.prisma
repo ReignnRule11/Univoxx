@@ -109,6 +109,19 @@ enum ContentStatus {
   ARCHIVED
 }
 
+enum ContentType {
+  TEXT
+  IMAGE
+  VIDEO
+}
+
+enum ContentVisibility {
+  PUBLIC
+  UNLISTED
+  FOLLOWERS
+  PRIVATE
+}
+
 enum PaymentStatus {
   PENDING
   SUCCEEDED
@@ -143,6 +156,7 @@ model User {
   profile              Profile?
   memberships          Membership[]
   content              Content[]
+  mediaAssets          MediaAsset[]
   payments             Payment[]
   events               Event[]
   rsvps                EventRsvp[]
@@ -160,6 +174,11 @@ model User {
   resolvedReports      Report[]             @relation("ReportResolver")
   moderationActions    ModerationAction[]
   notifications        Notification[]
+  following            CreatorFollow[]      @relation("Follower")
+  followers            CreatorFollow[]      @relation("CreatorFollowed")
+  contentReactions     ContentReaction[]
+  contentComments      ContentComment[]
+  contentShares        ContentShare[]
 }
 
 model Profile {
@@ -411,17 +430,106 @@ model Notification {
 }
 
 model Content {
-  id          String        @id @default(cuid())
-  communityId String
+  id          String            @id @default(cuid())
+  communityId String?
   authorId    String
+  type        ContentType       @default(TEXT)
   title       String
   body        String?
-  status      ContentStatus @default(DRAFT)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  status      ContentStatus     @default(DRAFT)
+  visibility  ContentVisibility @default(PRIVATE)
+  publishedAt DateTime?
+  deletedAt   DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
 
-  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
-  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  community Community?        @relation(fields: [communityId], references: [id], onDelete: SetNull)
+  author    User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  media     MediaAsset[]
+  reactions ContentReaction[]
+  comments  ContentComment[]
+  shares    ContentShare[]
+
+  @@index([authorId, createdAt])
+  @@index([status, visibility, publishedAt])
+  @@index([communityId, publishedAt])
+}
+
+model MediaAsset {
+  id              String   @id @default(cuid())
+  contentId       String
+  ownerId         String
+  storageKey      String   @unique
+  mimeType        String
+  byteSize        Int
+  checksumSha256  String
+  originalName    String?
+  createdAt       DateTime @default(now())
+
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  owner   User    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([contentId])
+  @@index([ownerId])
+}
+
+model CreatorFollow {
+  id         String   @id @default(cuid())
+  followerId String
+  creatorId  String
+  createdAt  DateTime @default(now())
+
+  follower User @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  creator  User @relation("CreatorFollowed", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, creatorId])
+  @@index([creatorId])
+}
+
+model ContentReaction {
+  id        String   @id @default(cuid())
+  contentId String
+  userId    String
+  emoji     String
+  createdAt DateTime @default(now())
+
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([contentId, userId, emoji])
+  @@index([contentId])
+}
+
+model ContentComment {
+  id        String        @id @default(cuid())
+  contentId String
+  authorId  String
+  parentId  String?
+  body      String
+  status    CommentStatus @default(PUBLISHED)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  content Content          @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  author  User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent  ContentComment?  @relation("ContentCommentThread", fields: [parentId], references: [id], onDelete: Cascade)
+  replies ContentComment[] @relation("ContentCommentThread")
+
+  @@index([contentId, createdAt])
+  @@index([authorId])
+}
+
+model ContentShare {
+  id        String   @id @default(cuid())
+  contentId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([contentId, userId])
+  @@index([contentId])
 }
 
 model Payment {

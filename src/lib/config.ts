@@ -16,8 +16,19 @@ export const envSchema = z
       .enum(["true", "false"])
       .default("false")
       .transform((value) => value === "true"),
+    STORAGE_PROVIDER: z.enum(["memory", "s3"]).optional(),
+    S3_ENDPOINT: z.string().url().optional().or(z.literal("")),
+    S3_REGION: z.string().min(1).optional(),
+    S3_BUCKET: z.string().min(1).optional(),
+    S3_ACCESS_KEY_ID: z.string().min(1).optional(),
+    S3_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+    S3_FORCE_PATH_STYLE: z
+      .enum(["true", "false"])
+      .default("true")
+      .transform((value) => value === "true"),
   })
   .superRefine((env, ctx) => {
+    const provider = env.STORAGE_PROVIDER ?? (env.NODE_ENV === "production" ? "s3" : "memory");
     if (env.NODE_ENV === "production") {
       if (env.AUTH_SECRET.includes("replace-with") || env.AUTH_SECRET.includes("test-auth-secret")) {
         ctx.addIssue({
@@ -31,6 +42,32 @@ export const envSchema = z
           code: z.ZodIssueCode.custom,
           path: ["DATABASE_URL"],
           message: "DATABASE_URL must not use the local development default in production",
+        });
+      }
+      if (provider === "memory") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["STORAGE_PROVIDER"],
+          message: "STORAGE_PROVIDER must be s3 in production",
+        });
+      }
+    }
+    if (provider === "s3") {
+      if (!env.S3_BUCKET) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["S3_BUCKET"], message: "S3_BUCKET is required" });
+      }
+      if (!env.S3_ACCESS_KEY_ID) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["S3_ACCESS_KEY_ID"],
+          message: "S3_ACCESS_KEY_ID is required",
+        });
+      }
+      if (!env.S3_SECRET_ACCESS_KEY) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["S3_SECRET_ACCESS_KEY"],
+          message: "S3_SECRET_ACCESS_KEY is required",
         });
       }
     }

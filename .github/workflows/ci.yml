@@ -16,6 +16,7 @@ jobs:
       CORS_ORIGINS: http://localhost:3000
       LOG_LEVEL: silent
       TRUST_PROXY: "false"
+      STORAGE_PROVIDER: memory
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

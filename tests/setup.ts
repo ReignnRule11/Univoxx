@@ -8,3 +8,4 @@ env.LOG_LEVEL = env.LOG_LEVEL ?? "silent";
 env.RATE_LIMIT_MAX = env.RATE_LIMIT_MAX ?? "100";
 env.RATE_LIMIT_WINDOW_MS = env.RATE_LIMIT_WINDOW_MS ?? "60000";
 env.TRUST_PROXY = env.TRUST_PROXY ?? "false";
+env.STORAGE_PROVIDER = env.STORAGE_PROVIDER ?? "memory";
