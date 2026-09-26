@@ -95,6 +95,7 @@ export type PaymentsStore = {
   findWebhookEvent(provider: string, eventId: string): Promise<{ eventId: string; transactionId: string | null } | null>;
   createMembership(input: CreateMembershipInput): Promise<CreatorMembershipRecord>;
   findMembershipByTransaction(transactionId: string): Promise<CreatorMembershipRecord | null>;
+  findActiveMembership(subscriberId: string, creatorId: string, at?: Date): Promise<CreatorMembershipRecord | null>;
 };
 
 function isUniqueViolation(error: unknown): boolean {
@@ -233,6 +234,18 @@ export const prismaPaymentsStore: PaymentsStore = {
   },
   async findMembershipByTransaction(transactionId) {
     return prisma.creatorMembership.findFirst({ where: { transactionId } });
+  },
+  async findActiveMembership(subscriberId, creatorId, at = new Date()) {
+    return prisma.creatorMembership.findFirst({
+      where: {
+        subscriberId,
+        creatorId,
+        status: "ACTIVE",
+        startsAt: { lte: at },
+        OR: [{ expiresAt: null }, { expiresAt: { gt: at } }],
+      },
+      orderBy: { createdAt: "desc" },
+    });
   },
 };
 

@@ -1,6 +1,6 @@
 # UNIVOX
 
-UNIVOX is a creator operating system. This repository is a modular Next.js monolith covering identity, community, content, and monetization. Payments, events, and AI remain fail-closed unless a real integration is configured.
+UNIVOX is a creator operating system. This repository is a modular Next.js monolith covering identity, community, content, monetization, and live events. Payments, live media, and AI remain fail-closed unless a real integration is configured.
 
 ## Stack
 
@@ -10,6 +10,7 @@ UNIVOX is a creator operating system. This repository is a modular Next.js monol
 - Passwords: scrypt (`scrypt$N$r$p$salt$hash`)
 - Media: memory storage in development/test, S3-compatible storage in production
 - Payments: provider abstraction with a signed sandbox adapter for local/test use
+- Live: provider abstraction (`local` in development/test; Daily or LiveKit when credentials exist)
 
 ## Modules
 
@@ -19,8 +20,8 @@ UNIVOX is a creator operating system. This repository is a modular Next.js monol
 | Community | Implemented | Tenant-scoped communities, channels, posts, moderation |
 | Content | Implemented | Draft/publish media, feed, follows, engagement |
 | Monetization | Implemented | Membership products, verified payments, creator earnings |
-| Events | Stubbed | `501 NOT_IMPLEMENTED` |
-| AI | Stubbed | `501 NOT_IMPLEMENTED` |
+| Live | Implemented | Schedule, access control, local/live-provider rooms, chat, recording metadata |
+| AI | Stubbed | Transcript jobs queue; summaries require a configured model |
 | Analytics | Stubbed | `501 NOT_IMPLEMENTED` |
 
 ## Monetization
@@ -49,6 +50,51 @@ Payouts to bank accounts are not implemented.
 
 Sandbox webhooks must be HMAC-SHA256 signed with `PAYMENTS_WEBHOOK_SECRET` in `x-univox-sandbox-signature`.
 
+## Live events
+
+Creators can draft, edit, publish, start, end, and cancel events. Access types are `FREE`, `SUBSCRIBER`, and `PAID`. Subscriber access requires an active creator membership. Paid access requires a verified succeeded payment to the host. Client-declared payment success is rejected.
+
+Event lifecycle:
+
+`DRAFT -> SCHEDULED -> LIVE -> ENDED`, with `DRAFT | SCHEDULED -> CANCELLED`.
+
+The live-room interface supports `local`, `daily`, and `livekit`. This environment implements **local rooms only**. Local rooms issue join metadata for tests and development. They do not produce recordings. Production rejects `LIVE_PROVIDER=local`. Daily and LiveKit return `503 SERVICE_UNAVAILABLE` until `LIVE_API_KEY` (and provider implementation) are present.
+
+Recording: requesting a recording from a local room stores `UNAVAILABLE` metadata. Hosts may upload recording bytes to the storage provider after the event ends. Downloads require host or registered attendee authorization. Missing storage or provider support is not reported as success.
+
+Transcripts: hosts may store a real transcript after the event ends. AI summary is queued in the data model and returns `503` until a language model is configured. Transcripts are never fabricated.
+
+### Event API
+
+- `POST /api/v1/events` — create a draft
+- `GET /api/v1/events` — list the host's events
+- `GET /api/v1/events/{eventId}` — fetch a visible event
+- `PATCH /api/v1/events/{eventId}` — host edit
+- `POST /api/v1/events/{eventId}/publish`
+- `POST /api/v1/events/{eventId}/cancel`
+- `POST /api/v1/events/{eventId}/start` — open the live room
+- `POST /api/v1/events/{eventId}/end`
+- `POST /api/v1/events/{eventId}/register` — `{ transactionId }` required for paid events
+- `GET /api/v1/events/{eventId}/attendees` — host only
+- `POST /api/v1/events/{eventId}/attendance` — check in and receive a join token
+- `DELETE /api/v1/events/{eventId}/attendance` — leave
+- `GET|POST /api/v1/events/{eventId}/chat`
+- `GET|POST /api/v1/events/{eventId}/recordings`
+- `GET /api/v1/events/{eventId}/recordings/{recordingId}`
+- `GET|POST /api/v1/events/{eventId}/transcripts`
+- `POST /api/v1/events/{eventId}/transcripts/{transcriptId}/summary`
+
+### External infrastructure
+
+To run live media and recordings in production you need:
+
+- A media provider such as Daily or LiveKit, with `LIVE_PROVIDER` and `LIVE_API_KEY`
+- Object storage (`STORAGE_PROVIDER=s3` plus bucket credentials) for uploaded recordings
+- A configured language model before transcript summaries can succeed
+- A live payment provider before paid-event settlement can leave sandbox
+
+Local development uses `LIVE_PROVIDER=local` and does not require Daily, LiveKit, or an LLM.
+
 ## Configuration
 
 Copy `.env.example` and set real values. Never commit secrets.
@@ -70,7 +116,13 @@ Payments:
 - `PAYMENTS_PROVIDER=sandbox` for development/test
 - `PAYMENTS_WEBHOOK_SECRET` required for sandbox
 - `PAYMENTS_PLATFORM_FEE_BPS` (default `1000` = 10%)
-- Live providers require their own credentials and are not implemented in this release
+- Live payment processors require their own credentials and are not implemented in this release
+
+Live rooms:
+
+- `LIVE_PROVIDER=local` for development/test
+- Production requires `daily` or `livekit` plus `LIVE_API_KEY`
+- `LIVE_API_URL` optional provider endpoint
 
 ## Development
 
@@ -96,12 +148,12 @@ npm run lint
 npm run build
 ```
 
-Identity, community, content, and payments tests use in-memory stores. They do not require a running PostgreSQL instance. Migrations still need a live database before production use.
+Identity, community, content, payments, and events tests use in-memory stores. They do not require a running PostgreSQL instance. Migrations still need a live database before production use.
 
 ## Security
 
 - Never trust client-supplied org, tenant, or payment-success flags
 - Refresh-token reuse revokes the session
-- Production rejects placeholder `AUTH_SECRET`, local `DATABASE_URL` defaults, memory storage, and sandbox payments
+- Production rejects placeholder `AUTH_SECRET`, local `DATABASE_URL` defaults, memory storage, sandbox payments, and local live rooms
 - Media blobs are not stored in PostgreSQL
 - Webhook signatures are compared with a constant-time check

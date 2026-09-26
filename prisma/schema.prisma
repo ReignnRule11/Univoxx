@@ -158,6 +158,30 @@ enum EventStatus {
   CANCELLED
 }
 
+enum EventAccessType {
+  FREE
+  SUBSCRIBER
+  PAID
+}
+
+enum EventAttendeeStatus {
+  REGISTERED
+  CHECKED_IN
+  LEFT
+}
+
+enum EventRecordingStatus {
+  NONE
+  REQUESTED
+  AVAILABLE
+  UNAVAILABLE
+}
+
+enum EventChatStatus {
+  VISIBLE
+  HIDDEN
+}
+
 enum AiJobStatus {
   QUEUED
   RUNNING
@@ -186,6 +210,8 @@ model User {
   grantedMemberships   CreatorMembership[]  @relation("MembershipCreator")
   events               Event[]
   rsvps                EventRsvp[]
+  eventAttendees       EventAttendee[]
+  eventChatMessages    EventChatMessage[]
   aiJobs               AiJob[]
   analyticsEvents      AnalyticsEvent[]
   organizations        OrganizationMember[]
@@ -675,19 +701,40 @@ model CreatorMembership {
 }
 
 model Event {
-  id          String      @id @default(cuid())
-  communityId String
-  hostId      String
-  title       String
-  startsAt    DateTime
-  endsAt      DateTime?
-  status      EventStatus @default(DRAFT)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id                 String              @id @default(cuid())
+  communityId        String?
+  organizationId     String?
+  hostId             String
+  title              String
+  description        String?
+  startsAt           DateTime
+  endsAt             DateTime?
+  accessType         EventAccessType     @default(FREE)
+  priceCents         Int?
+  currency           String              @default("USD")
+  capacity           Int?
+  status             EventStatus         @default(DRAFT)
+  publishedAt        DateTime?
+  startedAt          DateTime?
+  endedAt            DateTime?
+  cancelledAt        DateTime?
+  liveProvider       String?
+  liveRoomId         String?
+  recordingStatus    EventRecordingStatus @default(NONE)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 
-  community Community   @relation(fields: [communityId], references: [id], onDelete: Cascade)
-  host      User        @relation(fields: [hostId], references: [id], onDelete: Restrict)
-  rsvps     EventRsvp[]
+  community    Community?          @relation(fields: [communityId], references: [id], onDelete: SetNull)
+  host         User                @relation(fields: [hostId], references: [id], onDelete: Restrict)
+  rsvps        EventRsvp[]
+  attendees    EventAttendee[]
+  chatMessages EventChatMessage[]
+  recordings   EventRecording[]
+  transcripts  EventTranscript[]
+
+  @@index([hostId, startsAt])
+  @@index([communityId, status])
+  @@index([status, startsAt])
 }
 
 model EventRsvp {
@@ -700,6 +747,73 @@ model EventRsvp {
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, userId])
+}
+
+model EventAttendee {
+  id              String              @id @default(cuid())
+  eventId         String
+  userId          String
+  status          EventAttendeeStatus @default(REGISTERED)
+  transactionId   String?
+  registeredAt    DateTime            @default(now())
+  checkedInAt     DateTime?
+  leftAt          DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([eventId, userId])
+  @@index([eventId, status])
+  @@index([userId])
+}
+
+model EventChatMessage {
+  id        String          @id @default(cuid())
+  eventId   String
+  authorId  String
+  body      String
+  status    EventChatStatus @default(VISIBLE)
+  createdAt DateTime        @default(now())
+
+  event  Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  author User  @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([eventId, createdAt])
+}
+
+model EventRecording {
+  id            String               @id @default(cuid())
+  eventId       String
+  provider      String
+  providerRef   String?
+  storageKey    String?
+  mimeType      String?
+  byteSize      Int?
+  status        EventRecordingStatus @default(REQUESTED)
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId, status])
+}
+
+model EventTranscript {
+  id          String      @id @default(cuid())
+  eventId     String
+  recordingId String?
+  source      String
+  text        String
+  summary     String?
+  jobStatus   AiJobStatus @default(QUEUED)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
 }
 
 model AiJob {

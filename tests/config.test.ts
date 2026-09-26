@@ -73,6 +73,26 @@ describe("loadConfig", () => {
     ).toThrow(/live provider in production/);
   });
 
+  it("rejects local live rooms in production", () => {
+    expect(() =>
+      loadConfig({
+        ...validEnv,
+        NODE_ENV: "production",
+        APP_URL: "https://univox.example",
+        DATABASE_URL: "postgresql://prod-user:prod-pass@db.internal:5432/univox",
+        AUTH_SECRET: "production-secret-value-with-enough-length",
+        STORAGE_PROVIDER: "s3",
+        S3_BUCKET: "univox-media",
+        S3_ACCESS_KEY_ID: "access",
+        S3_SECRET_ACCESS_KEY: "secret",
+        PAYMENTS_PROVIDER: "stripe",
+        STRIPE_SECRET_KEY: "sk_test_placeholder",
+        STRIPE_WEBHOOK_SECRET: "whsec_placeholder",
+        LIVE_PROVIDER: "local",
+      }),
+    ).toThrow(/real media provider in production/);
+  });
+
   it("requires Stripe credentials when Stripe is selected", () => {
     expect(() =>
       loadConfig({

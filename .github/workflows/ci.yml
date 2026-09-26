@@ -20,6 +20,7 @@ jobs:
       PAYMENTS_PROVIDER: sandbox
       PAYMENTS_WEBHOOK_SECRET: test-payments-webhook-secret
       PAYMENTS_PLATFORM_FEE_BPS: "1000"
+      LIVE_PROVIDER: local
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

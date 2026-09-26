@@ -186,6 +186,18 @@ export function createPaymentsMemoryStore(): PaymentsStore {
     async findMembershipByTransaction(transactionId) {
       return [...memberships.values()].find((row) => row.transactionId === transactionId) ?? null;
     },
+    async findActiveMembership(subscriberId, creatorId, at = now()) {
+      return (
+        [...memberships.values()].find(
+          (row) =>
+            row.subscriberId === subscriberId &&
+            row.creatorId === creatorId &&
+            row.status === "ACTIVE" &&
+            row.startsAt.getTime() <= at.getTime() &&
+            (!row.expiresAt || row.expiresAt.getTime() > at.getTime()),
+        ) ?? null
+      );
+    },
   };
 
   return store;
