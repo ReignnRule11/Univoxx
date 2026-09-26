@@ -93,6 +93,15 @@ describe("loadConfig", () => {
     ).toThrow(/real media provider in production/);
   });
 
+  it("requires OpenAI credentials when OpenAI is selected", () => {
+    expect(() =>
+      loadConfig({
+        ...validEnv,
+        AI_PROVIDER: "openai",
+      }),
+    ).toThrow(/OPENAI_API_KEY/);
+  });
+
   it("requires Stripe credentials when Stripe is selected", () => {
     expect(() =>
       loadConfig({

@@ -20,14 +20,17 @@ import { POST as summarizeTranscript } from "@/app/api/v1/events/[eventId]/trans
 import { POST as createProduct } from "@/app/api/v1/products/route";
 import { POST as initiatePayment } from "@/app/api/v1/payments/route";
 import { POST as paymentWebhook } from "@/app/api/v1/payments/webhooks/route";
+import { resetAiProvider } from "@/lib/ai";
 import { resetLiveRoomProvider } from "@/lib/live";
 import { resetPaymentProvider, signSandboxWebhook } from "@/lib/payments";
 import { resetRateLimitStore } from "@/lib/security";
 import { MemoryStorageProvider, resetStorageProvider, setStorageProvider } from "@/lib/storage";
+import { resetAiStore, setAiStore } from "@/modules/ai/store";
 import { resetCommunityStore, setCommunityStore } from "@/modules/community/store";
 import { resetEventsStore, setEventsStore } from "@/modules/events/store";
 import { resetIdentityStore, setIdentityStore } from "@/modules/identity/store";
 import { resetPaymentsStore, setPaymentsStore } from "@/modules/payments/store";
+import { createAiMemoryStore } from "./helpers/ai-memory-store";
 import { createCommunityMemoryStore } from "./helpers/community-memory-store";
 import { createEventsMemoryStore } from "./helpers/events-memory-store";
 import { emptyRouteContext, routeContext } from "./helpers/invoke";
@@ -98,9 +101,11 @@ describe("events", () => {
     setCommunityStore(createCommunityMemoryStore());
     setPaymentsStore(createPaymentsMemoryStore());
     setEventsStore(createEventsMemoryStore());
+    setAiStore(createAiMemoryStore());
     setStorageProvider(new MemoryStorageProvider());
     resetLiveRoomProvider();
     resetPaymentProvider();
+    resetAiProvider();
   });
 
   afterEach(() => {
@@ -108,9 +113,11 @@ describe("events", () => {
     resetCommunityStore();
     resetPaymentsStore();
     resetEventsStore();
+    resetAiStore();
     resetStorageProvider();
     resetLiveRoomProvider();
     resetPaymentProvider();
+    resetAiProvider();
     resetRateLimitStore();
   });
 

@@ -10,16 +10,16 @@ describe("foundational modules", () => {
     resetRateLimitStore();
   });
 
-  it("does not expose fake payment settlement or AI implementations", async () => {
+  it("does not expose fake payment settlement or unauthenticated AI", async () => {
     const payments = await paymentsGet(new Request("http://localhost/api/v1/payments"), emptyRouteContext);
     const ai = await aiGet(new Request("http://localhost/api/v1/ai"), emptyRouteContext);
     expect(payments.status).toBe(401);
-    expect(ai.status).toBe(501);
+    expect(ai.status).toBe(401);
     await expect(payments.json()).resolves.toMatchObject({
       error: { code: "UNAUTHORIZED" },
     });
     await expect(ai.json()).resolves.toMatchObject({
-      error: { code: "NOT_IMPLEMENTED" },
+      error: { code: "UNAUTHORIZED" },
     });
   });
 

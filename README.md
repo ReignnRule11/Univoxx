@@ -1,6 +1,6 @@
 # UNIVOX
 
-UNIVOX is a creator operating system. This repository is a modular Next.js monolith covering identity, community, content, monetization, and live events. Payments, live media, and AI remain fail-closed unless a real integration is configured.
+UNIVOX is a creator operating system. This repository is a modular Next.js monolith covering identity, community, content, monetization, live events, and AI. Payments, live media, and AI remain fail-closed unless a real integration is configured.
 
 ## Stack
 
@@ -11,6 +11,7 @@ UNIVOX is a creator operating system. This repository is a modular Next.js monol
 - Media: memory storage in development/test, S3-compatible storage in production
 - Payments: provider abstraction with a signed sandbox adapter for local/test use
 - Live: provider abstraction (`local` in development/test; Daily or LiveKit when credentials exist)
+- AI: provider abstraction (OpenAI, Gemini, Anthropic) with timeouts, retries, and usage tracking
 
 ## Modules
 
@@ -21,7 +22,7 @@ UNIVOX is a creator operating system. This repository is a modular Next.js monol
 | Content | Implemented | Draft/publish media, feed, follows, engagement |
 | Monetization | Implemented | Membership products, verified payments, creator earnings |
 | Live | Implemented | Schedule, access control, local/live-provider rooms, chat, recording metadata |
-| AI | Stubbed | Transcript jobs queue; summaries require a configured model |
+| AI | Implemented | Captions, repurpose, event summary, analytics explain; fail-closed without credentials |
 | Analytics | Stubbed | `501 NOT_IMPLEMENTED` |
 
 ## Monetization
@@ -62,7 +63,7 @@ The live-room interface supports `local`, `daily`, and `livekit`. This environme
 
 Recording: requesting a recording from a local room stores `UNAVAILABLE` metadata. Hosts may upload recording bytes to the storage provider after the event ends. Downloads require host or registered attendee authorization. Missing storage or provider support is not reported as success.
 
-Transcripts: hosts may store a real transcript after the event ends. AI summary is queued in the data model and returns `503` until a language model is configured. Transcripts are never fabricated.
+Transcripts: hosts may store a real transcript after the event ends. AI summary requires a configured language model and returns `503` until one is present. Transcripts and summaries are never fabricated.
 
 ### Event API
 
@@ -95,6 +96,29 @@ To run live media and recordings in production you need:
 
 Local development uses `LIVE_PROVIDER=local` and does not require Daily, LiveKit, or an LLM.
 
+## AI
+
+Creators can generate captions, repurpose content, summarize an owned event transcript, and explain their own analytics snapshot. The gateway is:
+
+User request → authz → context assembly → model router → provider → output validation → usage tracking.
+
+AI cannot transfer money, modify financial records, bypass authorization, change ownership, or delete records. Prompt, completion, and transcript text are redacted from logs. Missing credentials, timeouts, and invalid provider output fail closed (`503` / `400`); they are not reported as success.
+
+The provider interface supports `openai`, `gemini`, and `anthropic`. Tests may inject a deterministic mock via `setAiProvider`. Production and development do not invent completions.
+
+### AI API
+
+- `POST /api/v1/ai/captions` — `{ contentId }` or `{ text, tone? }`
+- `POST /api/v1/ai/repurpose` — `{ contentId }` or `{ text, format? }` (`thread` | `newsletter` | `short`)
+- `POST /api/v1/ai/analytics/explain` — `{ question? }` using the caller's content, events, and succeeded payments
+- `POST /api/v1/events/{eventId}/transcripts/{transcriptId}/summary` — host only
+- `GET /api/v1/ai` — list the caller's jobs
+- `GET /api/v1/ai/usage` — aggregated token usage
+
+### External AI infrastructure
+
+To run generation outside tests you need `AI_PROVIDER` plus the matching key (`OPENAI_API_KEY`, `GEMINI_API_KEY`, or `ANTHROPIC_API_KEY`). Optional: `AI_MODEL`, `AI_TIMEOUT_MS`, `AI_MAX_RETRIES`, `OPENAI_BASE_URL`.
+
 ## Configuration
 
 Copy `.env.example` and set real values. Never commit secrets.
@@ -124,6 +148,12 @@ Live rooms:
 - Production requires `daily` or `livekit` plus `LIVE_API_KEY`
 - `LIVE_API_URL` optional provider endpoint
 
+AI:
+
+- Leave `AI_PROVIDER` unset to keep generation unavailable
+- Set `AI_PROVIDER` to `openai`, `gemini`, or `anthropic` plus the matching API key
+- `AI_TIMEOUT_MS` (default `15000`), `AI_MAX_RETRIES` (default `1`)
+
 ## Development
 
 ```bash
@@ -148,12 +178,13 @@ npm run lint
 npm run build
 ```
 
-Identity, community, content, payments, and events tests use in-memory stores. They do not require a running PostgreSQL instance. Migrations still need a live database before production use.
+Identity, community, content, payments, events, and AI tests use in-memory stores. They do not require a running PostgreSQL instance. Migrations still need a live database before production use.
 
 ## Security
 
 - Never trust client-supplied org, tenant, or payment-success flags
 - Refresh-token reuse revokes the session
 - Production rejects placeholder `AUTH_SECRET`, local `DATABASE_URL` defaults, memory storage, sandbox payments, and local live rooms
+- AI has no financial authority and does not log prompts, completions, or transcripts
 - Media blobs are not stored in PostgreSQL
 - Webhook signatures are compared with a constant-time check

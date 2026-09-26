@@ -213,6 +213,7 @@ model User {
   eventAttendees       EventAttendee[]
   eventChatMessages    EventChatMessage[]
   aiJobs               AiJob[]
+  aiUsages             AiUsage[]
   analyticsEvents      AnalyticsEvent[]
   organizations        OrganizationMember[]
   sessions             Session[]
@@ -817,14 +818,45 @@ model EventTranscript {
 }
 
 model AiJob {
-  id        String      @id @default(cuid())
-  userId    String
-  kind      String
-  status    AiJobStatus @default(QUEUED)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  id           String      @id @default(cuid())
+  userId       String
+  kind         String
+  status       AiJobStatus @default(QUEUED)
+  provider     String?
+  model        String?
+  promptHash   String?
+  inputTokens  Int?
+  outputTokens Int?
+  errorCode    String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  completedAt  DateTime?
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  usage AiUsage[]
+
+  @@index([userId, createdAt])
+  @@index([kind, status])
+}
+
+model AiUsage {
+  id           String   @id @default(cuid())
+  userId       String
+  jobId        String?
+  provider     String
+  model        String
+  kind         String
+  inputTokens  Int
+  outputTokens Int
+  latencyMs    Int
+  status       String
+  createdAt    DateTime @default(now())
+
+  user User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  AiJob? @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([provider, createdAt])
 }
 
 model AnalyticsEvent {

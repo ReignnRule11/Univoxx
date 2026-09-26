@@ -21,6 +21,8 @@ jobs:
       PAYMENTS_WEBHOOK_SECRET: test-payments-webhook-secret
       PAYMENTS_PLATFORM_FEE_BPS: "1000"
       LIVE_PROVIDER: local
+      AI_TIMEOUT_MS: "15000"
+      AI_MAX_RETRIES: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

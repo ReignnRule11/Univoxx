@@ -37,12 +37,21 @@ export const envSchema = z
     LIVE_PROVIDER: z.enum(["local", "daily", "livekit"]).optional(),
     LIVE_API_KEY: z.string().min(1).optional().or(z.literal("")),
     LIVE_API_URL: z.string().url().optional().or(z.literal("")),
+    AI_PROVIDER: z.enum(["openai", "gemini", "anthropic"]).optional(),
+    AI_MODEL: z.string().min(1).optional().or(z.literal("")),
+    AI_TIMEOUT_MS: z.coerce.number().int().positive().max(60_000).default(15_000),
+    AI_MAX_RETRIES: z.coerce.number().int().min(0).max(3).default(1),
+    OPENAI_API_KEY: z.string().min(1).optional().or(z.literal("")),
+    OPENAI_BASE_URL: z.string().url().optional().or(z.literal("")),
+    GEMINI_API_KEY: z.string().min(1).optional().or(z.literal("")),
+    ANTHROPIC_API_KEY: z.string().min(1).optional().or(z.literal("")),
   })
   .superRefine((env, ctx) => {
     const provider = env.STORAGE_PROVIDER ?? (env.NODE_ENV === "production" ? "s3" : "memory");
     const paymentsProvider =
       env.PAYMENTS_PROVIDER ?? (env.NODE_ENV === "production" ? undefined : "sandbox");
     const liveProvider = env.LIVE_PROVIDER ?? (env.NODE_ENV === "production" ? undefined : "local");
+    const aiProvider = env.AI_PROVIDER;
     if (env.NODE_ENV === "production") {
       if (env.AUTH_SECRET.includes("replace-with") || env.AUTH_SECRET.includes("test-auth-secret")) {
         ctx.addIssue({
@@ -127,6 +136,27 @@ export const envSchema = z
           message: "FLUTTERWAVE_WEBHOOK_HASH is required",
         });
       }
+    }
+    if (aiProvider === "openai" && !env.OPENAI_API_KEY) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["OPENAI_API_KEY"],
+        message: "OPENAI_API_KEY is required when AI_PROVIDER=openai",
+      });
+    }
+    if (aiProvider === "gemini" && !env.GEMINI_API_KEY) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["GEMINI_API_KEY"],
+        message: "GEMINI_API_KEY is required when AI_PROVIDER=gemini",
+      });
+    }
+    if (aiProvider === "anthropic" && !env.ANTHROPIC_API_KEY) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["ANTHROPIC_API_KEY"],
+        message: "ANTHROPIC_API_KEY is required when AI_PROVIDER=anthropic",
+      });
     }
     if ((liveProvider === "daily" || liveProvider === "livekit") && !env.LIVE_API_KEY) {
       ctx.addIssue({

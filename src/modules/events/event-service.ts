@@ -472,13 +472,8 @@ export async function createTranscript(
 }
 
 export async function summarizeTranscript(user: UserRecord, eventId: string, transcriptId: string): Promise<PublicTranscript> {
-  await requireEventHost(eventId, user.id);
-  const transcripts = await getEventsStore().listTranscripts(eventId);
-  const current = transcripts.find((row) => row.id === transcriptId);
-  if (!current) {
-    throw notFound("Transcript not found");
-  }
-  throw serviceUnavailable("AI summary requires a configured language model");
+  const { summarizeEventTranscript } = await import("@/modules/ai/ai-service");
+  return summarizeEventTranscript(user, eventId, transcriptId);
 }
 
 export async function listTranscripts(user: UserRecord, eventId: string): Promise<PublicTranscript[]> {
