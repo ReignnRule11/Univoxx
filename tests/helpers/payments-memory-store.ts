@@ -198,6 +198,11 @@ export function createPaymentsMemoryStore(): PaymentsStore {
         ) ?? null
       );
     },
+    async listMembershipsByCreator(creatorId) {
+      return [...memberships.values()]
+        .filter((row) => row.creatorId === creatorId)
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    },
   };
 
   return store;

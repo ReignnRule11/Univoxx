@@ -12,16 +12,9 @@ export const GET = apiRoute(async (request) => {
   const query = parseSearchParams(new URL(request.url), dashboardQuerySchema);
   const dashboard = await getCreatorDashboard(auth.user, query);
   return json({
-    module: "analytics",
-    endpoints: [
-      "GET /api/v1/analytics",
-      "GET /api/v1/analytics/audience",
-      "GET /api/v1/analytics/content",
-      "GET /api/v1/analytics/community",
-      "GET /api/v1/analytics/monetization",
-      "GET /api/v1/analytics/events",
-    ],
-    dashboard,
+    range: dashboard.range,
+    monetization: dashboard.monetization,
+    chart: dashboard.charts.revenueCents,
   });
 });
 

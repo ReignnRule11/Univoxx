@@ -96,6 +96,7 @@ export type PaymentsStore = {
   createMembership(input: CreateMembershipInput): Promise<CreatorMembershipRecord>;
   findMembershipByTransaction(transactionId: string): Promise<CreatorMembershipRecord | null>;
   findActiveMembership(subscriberId: string, creatorId: string, at?: Date): Promise<CreatorMembershipRecord | null>;
+  listMembershipsByCreator(creatorId: string): Promise<CreatorMembershipRecord[]>;
 };
 
 function isUniqueViolation(error: unknown): boolean {
@@ -244,6 +245,12 @@ export const prismaPaymentsStore: PaymentsStore = {
         startsAt: { lte: at },
         OR: [{ expiresAt: null }, { expiresAt: { gt: at } }],
       },
+      orderBy: { createdAt: "desc" },
+    });
+  },
+  async listMembershipsByCreator(creatorId) {
+    return prisma.creatorMembership.findMany({
+      where: { creatorId },
       orderBy: { createdAt: "desc" },
     });
   },

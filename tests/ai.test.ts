@@ -16,12 +16,14 @@ import { HttpAiProvider, type AiCompletionRequest, type AiProvider, resetAiProvi
 import { resetLiveRoomProvider } from "@/lib/live";
 import { resetRateLimitStore } from "@/lib/security";
 import { resetAiStore, setAiStore } from "@/modules/ai/store";
+import { resetAnalyticsStore, setAnalyticsStore } from "@/modules/analytics/store";
 import { resetCommunityStore, setCommunityStore } from "@/modules/community/store";
 import { resetContentStore, setContentStore } from "@/modules/content/store";
 import { resetEventsStore, setEventsStore } from "@/modules/events/store";
 import { resetIdentityStore, setIdentityStore } from "@/modules/identity/store";
 import { resetPaymentsStore, setPaymentsStore } from "@/modules/payments/store";
 import { createAiMemoryStore } from "./helpers/ai-memory-store";
+import { createAnalyticsMemoryStore } from "./helpers/analytics-memory-store";
 import { createCommunityMemoryStore } from "./helpers/community-memory-store";
 import { createContentMemoryStore } from "./helpers/content-memory-store";
 import { createEventsMemoryStore } from "./helpers/events-memory-store";
@@ -86,6 +88,7 @@ describe("ai", () => {
     setPaymentsStore(createPaymentsMemoryStore());
     setEventsStore(createEventsMemoryStore());
     setAiStore(createAiMemoryStore());
+    setAnalyticsStore(createAnalyticsMemoryStore());
     resetLiveRoomProvider();
     resetAiProvider();
   });
@@ -97,6 +100,7 @@ describe("ai", () => {
     resetPaymentsStore();
     resetEventsStore();
     resetAiStore();
+    resetAnalyticsStore();
     resetLiveRoomProvider();
     resetAiProvider();
     resetRateLimitStore();

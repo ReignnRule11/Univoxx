@@ -155,6 +155,11 @@ export function createContentMemoryStore(): ContentStore {
     async listFollowedCreatorIds(followerId) {
       return [...follows.values()].filter((row) => row.followerId === followerId).map((row) => row.creatorId);
     },
+    async listFollowersByCreator(creatorId) {
+      return [...follows.values()]
+        .filter((row) => row.creatorId === creatorId)
+        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    },
     async createReaction(contentId, userId, emoji) {
       const exists = [...reactions.values()].find(
         (row) => row.contentId === contentId && row.userId === userId && row.emoji === emoji,
@@ -229,6 +234,18 @@ export function createContentMemoryStore(): ContentStore {
       };
       shares.set(created.id, created);
       return created;
+    },
+    async listReactionsByContentIds(contentIds) {
+      const ids = new Set(contentIds);
+      return [...reactions.values()].filter((row) => ids.has(row.contentId));
+    },
+    async listCommentsByContentIds(contentIds) {
+      const ids = new Set(contentIds);
+      return [...comments.values()].filter((row) => ids.has(row.contentId) && row.status === "PUBLISHED");
+    },
+    async listSharesByContentIds(contentIds) {
+      const ids = new Set(contentIds);
+      return [...shares.values()].filter((row) => ids.has(row.contentId));
     },
   };
 

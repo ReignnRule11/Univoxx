@@ -860,13 +860,22 @@ model AiUsage {
 }
 
 model AnalyticsEvent {
-  id        String   @id @default(cuid())
-  userId    String?
-  name      String
-  payload   Json?
-  createdAt DateTime @default(now())
+  id             String   @id @default(cuid())
+  name           String
+  userId         String?
+  creatorId      String?
+  organizationId String?
+  contentId      String?
+  communityId    String?
+  eventId        String?
+  payload        Json?
+  createdAt      DateTime @default(now())
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
+  @@unique([name, userId, contentId])
   @@index([name, createdAt])
+  @@index([creatorId, name, createdAt])
+  @@index([organizationId, name, createdAt])
+  @@index([contentId, createdAt])
 }

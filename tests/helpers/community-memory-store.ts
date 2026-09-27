@@ -78,6 +78,9 @@ export function createCommunityMemoryStore(): CommunityStore {
     async listCommunitiesByIds(ids) {
       return ids.map((communityId) => communities.get(communityId)).filter((row): row is CommunityRecord => Boolean(row));
     },
+    async listCommunitiesByCreator(createdById) {
+      return [...communities.values()].filter((row) => row.createdById === createdById);
+    },
     async updateCommunity(communityId, data) {
       const current = communities.get(communityId);
       if (!current) {
@@ -222,6 +225,12 @@ export function createCommunityMemoryStore(): CommunityStore {
         .filter((row) => row.channelId === channelId)
         .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     },
+    async listPostsByCommunityIds(communityIds) {
+      const ids = new Set(communityIds);
+      return [...posts.values()]
+        .filter((row) => ids.has(row.communityId) && row.status === "PUBLISHED")
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    },
     async updatePost(postId, data) {
       const current = posts.get(postId);
       if (!current) {
@@ -253,6 +262,10 @@ export function createCommunityMemoryStore(): CommunityStore {
       return [...comments.values()]
         .filter((row) => row.postId === postId)
         .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    },
+    async listCommentsByCommunityIds(communityIds) {
+      const ids = new Set(communityIds);
+      return [...comments.values()].filter((row) => ids.has(row.communityId) && row.status === "PUBLISHED");
     },
     async updateComment(commentId, data) {
       const current = comments.get(commentId);
@@ -297,6 +310,10 @@ export function createCommunityMemoryStore(): CommunityStore {
       return [...reactions.values()].filter(
         (row) => row.communityId === communityId && row.targetType === targetType && row.targetId === targetId,
       );
+    },
+    async listReactionsByCommunityIds(communityIds) {
+      const ids = new Set(communityIds);
+      return [...reactions.values()].filter((row) => ids.has(row.communityId));
     },
     async deleteReaction(reactionId) {
       reactions.delete(reactionId);

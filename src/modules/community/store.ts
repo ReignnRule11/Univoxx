@@ -95,6 +95,7 @@ export type CommunityStore = {
   findCommunityByOrgSlug(organizationId: string, slug: string): Promise<CommunityRecord | null>;
   listCommunitiesByOrganization(organizationId: string): Promise<CommunityRecord[]>;
   listCommunitiesByIds(ids: string[]): Promise<CommunityRecord[]>;
+  listCommunitiesByCreator(createdById: string): Promise<CommunityRecord[]>;
   updateCommunity(
     id: string,
     data: Partial<Pick<CommunityRecord, "name" | "description" | "visibility">>,
@@ -127,16 +128,19 @@ export type CommunityStore = {
   createPost(input: CreatePostInput): Promise<PostRecord>;
   findPostById(id: string): Promise<PostRecord | null>;
   listPostsByChannel(channelId: string): Promise<PostRecord[]>;
+  listPostsByCommunityIds(communityIds: string[]): Promise<PostRecord[]>;
   updatePost(id: string, data: Partial<Pick<PostRecord, "title" | "body" | "status">>): Promise<PostRecord>;
 
   createComment(input: CreateCommentInput): Promise<CommentRecord>;
   findCommentById(id: string): Promise<CommentRecord | null>;
   listCommentsByPost(postId: string): Promise<CommentRecord[]>;
+  listCommentsByCommunityIds(communityIds: string[]): Promise<CommentRecord[]>;
   updateComment(id: string, data: Partial<Pick<CommentRecord, "body" | "status">>): Promise<CommentRecord>;
 
   createReaction(input: CreateReactionInput): Promise<ReactionRecord>;
   findReaction(userId: string, targetType: ReactionTargetType, targetId: string, emoji: string): Promise<ReactionRecord | null>;
   listReactions(communityId: string, targetType: ReactionTargetType, targetId: string): Promise<ReactionRecord[]>;
+  listReactionsByCommunityIds(communityIds: string[]): Promise<ReactionRecord[]>;
   deleteReaction(id: string): Promise<void>;
 
   createReport(input: CreateReportInput): Promise<ReportRecord>;
@@ -217,6 +221,9 @@ export const prismaCommunityStore: CommunityStore = {
       return [];
     }
     return prisma.community.findMany({ where: { id: { in: ids } } });
+  },
+  async listCommunitiesByCreator(createdById) {
+    return prisma.community.findMany({ where: { createdById } });
   },
   async updateCommunity(id, data) {
     return prisma.community.update({ where: { id }, data });
@@ -315,6 +322,15 @@ export const prismaCommunityStore: CommunityStore = {
   async listPostsByChannel(channelId) {
     return prisma.post.findMany({ where: { channelId }, orderBy: { createdAt: "desc" } });
   },
+  async listPostsByCommunityIds(communityIds) {
+    if (communityIds.length === 0) {
+      return [];
+    }
+    return prisma.post.findMany({
+      where: { communityId: { in: communityIds }, status: "PUBLISHED" },
+      orderBy: { createdAt: "desc" },
+    });
+  },
   async updatePost(id, data) {
     return prisma.post.update({ where: { id }, data });
   },
@@ -334,6 +350,14 @@ export const prismaCommunityStore: CommunityStore = {
   },
   async listCommentsByPost(postId) {
     return prisma.comment.findMany({ where: { postId }, orderBy: { createdAt: "asc" } });
+  },
+  async listCommentsByCommunityIds(communityIds) {
+    if (communityIds.length === 0) {
+      return [];
+    }
+    return prisma.comment.findMany({
+      where: { communityId: { in: communityIds }, status: "PUBLISHED" },
+    });
   },
   async updateComment(id, data) {
     return prisma.comment.update({ where: { id }, data });
@@ -355,6 +379,12 @@ export const prismaCommunityStore: CommunityStore = {
   },
   async listReactions(communityId, targetType, targetId) {
     return prisma.reaction.findMany({ where: { communityId, targetType, targetId } });
+  },
+  async listReactionsByCommunityIds(communityIds) {
+    if (communityIds.length === 0) {
+      return [];
+    }
+    return prisma.reaction.findMany({ where: { communityId: { in: communityIds } } });
   },
   async deleteReaction(id) {
     await prisma.reaction.delete({ where: { id } });

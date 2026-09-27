@@ -15,9 +15,11 @@ import { POST as shareContent } from "@/app/api/v1/content/[contentId]/shares/ro
 import { POST as createCommunity } from "@/app/api/v1/communities/route";
 import { MemoryStorageProvider, resetStorageProvider, setStorageProvider } from "@/lib/storage";
 import { resetRateLimitStore } from "@/lib/security";
+import { resetAnalyticsStore, setAnalyticsStore } from "@/modules/analytics/store";
 import { resetCommunityStore, setCommunityStore } from "@/modules/community/store";
 import { resetContentStore, setContentStore } from "@/modules/content/store";
 import { resetIdentityStore, setIdentityStore } from "@/modules/identity/store";
+import { createAnalyticsMemoryStore } from "./helpers/analytics-memory-store";
 import { createCommunityMemoryStore } from "./helpers/community-memory-store";
 import { createContentMemoryStore } from "./helpers/content-memory-store";
 import { emptyRouteContext, routeContext } from "./helpers/invoke";
@@ -60,6 +62,7 @@ describe("content", () => {
     setIdentityStore(createMemoryStore());
     setCommunityStore(createCommunityMemoryStore());
     setContentStore(createContentMemoryStore());
+    setAnalyticsStore(createAnalyticsMemoryStore());
     setStorageProvider(new MemoryStorageProvider());
   });
 
@@ -67,6 +70,7 @@ describe("content", () => {
     resetIdentityStore();
     resetCommunityStore();
     resetContentStore();
+    resetAnalyticsStore();
     resetStorageProvider();
     resetRateLimitStore();
   });

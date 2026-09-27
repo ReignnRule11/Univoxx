@@ -96,6 +96,12 @@ export function createEventsMemoryStore(): EventsStore {
         .filter((row) => row.eventId === eventId)
         .sort((a, b) => a.registeredAt.getTime() - b.registeredAt.getTime());
     },
+    async listAttendeesByEventIds(eventIds) {
+      const ids = new Set(eventIds);
+      return [...attendees.values()]
+        .filter((row) => ids.has(row.eventId))
+        .sort((a, b) => a.registeredAt.getTime() - b.registeredAt.getTime());
+    },
     async countAttendees(eventId) {
       return [...attendees.values()].filter((row) => row.eventId === eventId).length;
     },

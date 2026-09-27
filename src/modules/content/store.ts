@@ -61,6 +61,7 @@ export type ContentStore = {
   unfollowCreator(followerId: string, creatorId: string): Promise<void>;
   findFollow(followerId: string, creatorId: string): Promise<CreatorFollowRecord | null>;
   listFollowedCreatorIds(followerId: string): Promise<string[]>;
+  listFollowersByCreator(creatorId: string): Promise<CreatorFollowRecord[]>;
 
   createReaction(contentId: string, userId: string, emoji: string): Promise<ContentReactionRecord>;
   findReaction(contentId: string, userId: string, emoji: string): Promise<ContentReactionRecord | null>;
@@ -78,6 +79,9 @@ export type ContentStore = {
   updateComment(id: string, data: Partial<Pick<ContentCommentRecord, "body" | "status">>): Promise<ContentCommentRecord>;
 
   createShare(contentId: string, userId: string): Promise<ContentShareRecord>;
+  listReactionsByContentIds(contentIds: string[]): Promise<ContentReactionRecord[]>;
+  listCommentsByContentIds(contentIds: string[]): Promise<ContentCommentRecord[]>;
+  listSharesByContentIds(contentIds: string[]): Promise<ContentShareRecord[]>;
 };
 
 function isUniqueViolation(error: unknown): boolean {
@@ -194,6 +198,12 @@ export const prismaContentStore: ContentStore = {
     });
     return rows.map((row) => row.creatorId);
   },
+  async listFollowersByCreator(creatorId) {
+    return prisma.creatorFollow.findMany({
+      where: { creatorId },
+      orderBy: { createdAt: "asc" },
+    });
+  },
   async createReaction(contentId, userId, emoji) {
     try {
       return await prisma.contentReaction.create({ data: { contentId, userId, emoji } });
@@ -246,6 +256,26 @@ export const prismaContentStore: ContentStore = {
       }
       throw error;
     }
+  },
+  async listReactionsByContentIds(contentIds) {
+    if (contentIds.length === 0) {
+      return [];
+    }
+    return prisma.contentReaction.findMany({ where: { contentId: { in: contentIds } } });
+  },
+  async listCommentsByContentIds(contentIds) {
+    if (contentIds.length === 0) {
+      return [];
+    }
+    return prisma.contentComment.findMany({
+      where: { contentId: { in: contentIds }, status: "PUBLISHED" },
+    });
+  },
+  async listSharesByContentIds(contentIds) {
+    if (contentIds.length === 0) {
+      return [];
+    }
+    return prisma.contentShare.findMany({ where: { contentId: { in: contentIds } } });
   },
 };
 

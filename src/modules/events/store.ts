@@ -61,6 +61,7 @@ export type EventsStore = {
   }): Promise<EventAttendeeRecord>;
   findAttendee(eventId: string, userId: string): Promise<EventAttendeeRecord | null>;
   listAttendees(eventId: string): Promise<EventAttendeeRecord[]>;
+  listAttendeesByEventIds(eventIds: string[]): Promise<EventAttendeeRecord[]>;
   countAttendees(eventId: string): Promise<number>;
   updateAttendee(
     id: string,
@@ -150,6 +151,15 @@ export const prismaEventsStore: EventsStore = {
   },
   async listAttendees(eventId) {
     return prisma.eventAttendee.findMany({ where: { eventId }, orderBy: { registeredAt: "asc" } });
+  },
+  async listAttendeesByEventIds(eventIds) {
+    if (eventIds.length === 0) {
+      return [];
+    }
+    return prisma.eventAttendee.findMany({
+      where: { eventId: { in: eventIds } },
+      orderBy: { registeredAt: "asc" },
+    });
   },
   async countAttendees(eventId) {
     return prisma.eventAttendee.count({ where: { eventId } });

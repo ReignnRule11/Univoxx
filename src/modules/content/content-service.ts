@@ -82,6 +82,8 @@ export async function listOwnContent(userId: string): Promise<PublicContent[]> {
 
 export async function getContent(contentId: string, viewerId: string): Promise<PublicContent> {
   const content = await requireViewableContent(contentId, viewerId);
+  const { recordContentView } = await import("@/modules/analytics/analytics-service");
+  await recordContentView(viewerId, content.id);
   return withMedia(content);
 }
 

@@ -23,7 +23,7 @@ UNIVOX is a creator operating system. This repository is a modular Next.js monol
 | Monetization | Implemented | Membership products, verified payments, creator earnings |
 | Live | Implemented | Schedule, access control, local/live-provider rooms, chat, recording metadata |
 | AI | Implemented | Captions, repurpose, event summary, analytics explain; fail-closed without credentials |
-| Analytics | Stubbed | `501 NOT_IMPLEMENTED` |
+| Analytics | Implemented | Creator dashboard from persisted audience, content, community, payments, and events |
 
 ## Monetization
 
@@ -110,7 +110,7 @@ The provider interface supports `openai`, `gemini`, and `anthropic`. Tests may i
 
 - `POST /api/v1/ai/captions` — `{ contentId }` or `{ text, tone? }`
 - `POST /api/v1/ai/repurpose` — `{ contentId }` or `{ text, format? }` (`thread` | `newsletter` | `short`)
-- `POST /api/v1/ai/analytics/explain` — `{ question? }` using the caller's content, events, and succeeded payments
+- `POST /api/v1/ai/analytics/explain` — `{ question? }` using the caller's verified dashboard snapshot
 - `POST /api/v1/events/{eventId}/transcripts/{transcriptId}/summary` — host only
 - `GET /api/v1/ai` — list the caller's jobs
 - `GET /api/v1/ai/usage` — aggregated token usage
@@ -118,6 +118,34 @@ The provider interface supports `openai`, `gemini`, and `anthropic`. Tests may i
 ### External AI infrastructure
 
 To run generation outside tests you need `AI_PROVIDER` plus the matching key (`OPENAI_API_KEY`, `GEMINI_API_KEY`, or `ANTHROPIC_API_KEY`). Optional: `AI_MODEL`, `AI_TIMEOUT_MS`, `AI_MAX_RETRIES`, `OPENAI_BASE_URL`.
+
+## Analytics
+
+Creators can read an operational dashboard of their own persisted data. Metrics are aggregated server-side. Client-supplied totals are ignored. Revenue comes only from succeeded payment transactions. Views are unique per viewer and content; the author viewing their own content is not counted.
+
+Default range is the last 30 days. Pass `from` and `to` as ISO datetimes. Pass `organizationId` to limit community, community-linked content, and org-scoped events to communities and events in that organization. Organization members can only request an org they belong to; they still only see their own creator metrics.
+
+Definitions:
+
+- Followers: `CreatorFollow` rows created on or before the range end
+- Follower growth: follows created inside the range
+- Active members: distinct active community members across communities the creator created
+- Content views: unique `content.view` analytics events
+- Likes / comments / shares: persisted content engagement in range
+- Engagement rate: `(likes + comments + shares) / views`, or `0` when views are `0`
+- Community engagement: posts + comments + reactions in range
+- Gross / fees / earnings: sum of succeeded transactions (`amountCents`, `platformFeeCents`, `creatorAmountCents`)
+- Paying members: distinct active creator-membership subscribers at range end
+- Event attendance: attendees with a check-in timestamp in range
+
+### Analytics API
+
+- `GET /api/v1/analytics` — full dashboard plus daily charts
+- `GET /api/v1/analytics/audience`
+- `GET /api/v1/analytics/content`
+- `GET /api/v1/analytics/community`
+- `GET /api/v1/analytics/monetization`
+- `GET /api/v1/analytics/events`
 
 ## Configuration
 
@@ -178,7 +206,7 @@ npm run lint
 npm run build
 ```
 
-Identity, community, content, payments, events, and AI tests use in-memory stores. They do not require a running PostgreSQL instance. Migrations still need a live database before production use.
+Identity, community, content, payments, events, AI, and analytics tests use in-memory stores. They do not require a running PostgreSQL instance. Migrations still need a live database before production use.
 
 ## Security
 

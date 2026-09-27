@@ -3,13 +3,11 @@ import { type AiKind, getAiProvider } from "@/lib/ai";
 import { AppError, forbidden, notFound, serviceUnavailable, validationError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { requireContentOwner } from "@/modules/content/authorization";
-import { getContentStore } from "@/modules/content/store";
 import { requireEventHost } from "@/modules/events/authorization";
 import { getEventsStore } from "@/modules/events/store";
 import { publicTranscript } from "@/modules/events/serializers";
 import type { PublicTranscript } from "@/modules/events/types";
 import type { UserRecord } from "@/modules/identity/types";
-import { getPaymentsStore } from "@/modules/payments/store";
 import { publicAiJob } from "./serializers";
 import { getAiStore } from "./store";
 import type { PublicAiGeneration, PublicAiJob, PublicAiUsage } from "./types";
@@ -152,24 +150,13 @@ export async function explainCreatorAnalytics(
   user: UserRecord,
   question?: string,
 ): Promise<PublicAiGeneration> {
-  const [content, events, earnings] = await Promise.all([
-    getContentStore().listContentByAuthor(user.id),
-    getEventsStore().listEventsByHost(user.id),
-    getPaymentsStore().listTransactionsByRecipient(user.id),
-  ]);
-  const succeeded = earnings.filter((row) => row.status === "SUCCEEDED");
-  const snapshot = {
-    contentCount: content.length,
-    publishedCount: content.filter((row) => row.status === "PUBLISHED").length,
-    eventCount: events.length,
-    liveCount: events.filter((row) => row.status === "LIVE" || row.status === "ENDED").length,
-    succeededPayments: succeeded.length,
-    grossRevenueCents: succeeded.reduce((sum, row) => sum + row.amountCents, 0),
-  };
+  const { getCreatorDashboard, verifiedAnalyticsSnapshot } = await import("@/modules/analytics/analytics-service");
+  const dashboard = await getCreatorDashboard(user);
+  const snapshot = verifiedAnalyticsSnapshot(dashboard);
   return runGeneration(
     user,
     "analytics_explain",
-    `Explain these creator stats in plain language. Do not recommend transferring money, changing ownership, or deleting records. Question: ${question ?? "What stands out?"}\n\n${JSON.stringify(snapshot)}`,
+    `Explain these verified creator analytics. Use only these numbers. Do not invent metrics, payments, or audience size. Do not recommend transferring money, changing ownership, or deleting records. Question: ${question ?? "What stands out?"}\n\n${JSON.stringify(snapshot)}`,
   );
 }
 
