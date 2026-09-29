@@ -2,6 +2,14 @@
 
 UNIVOX is a creator operating system. This repository is a modular Next.js monolith covering identity, community, content, monetization, live events, and AI. Payments, live media, and AI remain fail-closed unless a real integration is configured.
 
+## Product surface
+
+Audience navigation: Home, Discover, Communities, Live, Messages, Creator Studio.
+
+Creator Studio: Overview, Content, Community, Monetization, Events, AI, Analytics, Settings.
+
+The UI consumes existing `/api/v1` contracts. It does not invent payment success, AI output, or analytics totals.
+
 ## Stack
 
 - Next.js 15 App Router, TypeScript, Prisma, PostgreSQL
